@@ -81,6 +81,8 @@ def _merge_prompt(site_map: list[dict], fragments: list[Ontology], lang: str) ->
         "- Make sure every link/action references existing object type IDs.\n"
         "- Keep the strongest evidence items (max 3 per element).\n"
         "- Consolidate and deduplicate open_questions; add questions about the business as a whole.\n"
+        "- Keep `domain` to a short name of about 20 Japanese characters or less (e.g. 書籍EC（デモサイト）), with no\n"
+        "  explanation, site name list or nested parentheses; put details in `summary`.\n"
         "- Keep `summary` to 2-3 short sentences (about 150 Japanese characters): what the site is, its core object\n"
         "  types, and the most important thing the site does not show. Do not list objects, properties or actions\n"
         "  one by one (they are already in the ontology), and do not use numbered or bulleted lists.\n\n"

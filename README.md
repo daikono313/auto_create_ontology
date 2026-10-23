@@ -50,6 +50,7 @@ LLM は Claude Code のヘッドレスモード（`claude -p --json-schema`）�
 ```bash
 uv sync
 uv run ontogen run https://books.toscrape.com/index.html --out out/books --gold gold/books_toscrape.yaml
+uv run ontogen run https://webscraper.io/test-sites/e-commerce/allinone --out out/webscraper --gold gold/webscraper_allinone.yaml
 uv run ontogen eval out/books/ontology.yaml gold/books_toscrape.yaml
 ```
 

@@ -20,16 +20,19 @@ def cmd_run(args) -> None:
         pages = json.loads(pages_file.read_text())
     else:
         print(f"[1/3] クロール: {args.url}")
-        raw = crawl(args.url, max_pages=args.max_pages, per_pattern=args.per_pattern, delay=args.delay)
+        raw = crawl(args.url, max_pages=args.max_pages, per_pattern=args.per_pattern, delay=args.delay,
+                    scope=args.scope)
         pages = [{"url": p.url, "pattern": p.pattern, "digest": digest(p.url, p.html), "text": page_text(p.html)}
                  for p in raw]
+        if not pages:
+            raise SystemExit(f"ページを1件も取得できなかった。URL・robots.txt・--scope を確認する: {args.url}")
         pages_file.write_text(json.dumps(pages, ensure_ascii=False, indent=1))
 
     print(f"[2/3] オントロジー生成（{len(pages)} ページ, {len({p['pattern'] for p in pages})} パターン）")
     onto = generate(pages, out, lang=args.lang, model=args.model)
 
     print("[3/3] 書き出し")
-    check = verify_evidence(onto, {p["url"]: p["text"] + "\n" + json.dumps(p["digest"], ensure_ascii=False) for p in pages})
+    check = verify_evidence(onto, {p["url"]: p["text"] + "\n" + "\n".join(_strings(p["digest"])) for p in pages})
     (out / "ontology.yaml").write_text(to_yaml(onto))
     (out / "ontology.mmd").write_text(to_mermaid(onto))
     (out / "report.md").write_text(to_report(onto, check, args.url))
@@ -38,6 +41,17 @@ def cmd_run(args) -> None:
 
     if args.gold:
         _print_eval(onto, args.gold)
+
+
+def _strings(value) -> list[str]:
+    """ページ要約に含まれる文字列をすべて取り出す（引用の照合用。JSON のエスケープを避ける）。"""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        value = list(value.values())
+    if isinstance(value, list):
+        return [s for v in value for s in _strings(v)]
+    return []
 
 
 def _print_eval(onto: Ontology, gold: str) -> None:
@@ -61,6 +75,7 @@ def main() -> None:
     run.add_argument("--max-pages", type=int, default=40)
     run.add_argument("--per-pattern", type=int, default=3, help="同じURLパターンから取得する最大ページ数")
     run.add_argument("--delay", type=float, default=0.5, help="リクエスト間隔（秒）")
+    run.add_argument("--scope", help="クロールするパスの範囲（既定: 開始URLのパス）")
     run.add_argument("--lang", default="Japanese", help="説明文の言語")
     run.add_argument("--model", default=None, help="claude -p に渡すモデル名")
     run.add_argument("--recrawl", action="store_true", help="キャッシュ済みのクロール結果を使わない")

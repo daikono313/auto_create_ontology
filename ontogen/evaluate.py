@@ -3,7 +3,7 @@
 gold の書式は gold/*.yaml を参照。名前は `|` 区切りで別名を書け、optional: true の要素
 （プロパティは名前の先頭に `?`）は、生成されなくても再現率を下げず、生成されても適合率を下げない。
 properties を書いていない Object はプロパティを採点しない。
-推定の要素（根拠がない、または説明が【推定】で始まる）は、gold と一致すれば正解として数え、
+推定の要素（inferred が true）は、gold と一致すれば正解として数え、
 一致しなければ適合率の分母に入れず inferred として件数だけ出す（ADR 0009）。
 """
 
@@ -38,7 +38,7 @@ def _pr(tp: int, n_pred: int, n_gold: int) -> dict:
 
 
 def _is_inferred(element) -> bool:
-    return not element.evidence or element.description.startswith("【推定")
+    return element.inferred
 
 
 def _score(pred_ids: list[str], gold_items: list[dict], exact: bool = False,

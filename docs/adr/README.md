@@ -10,7 +10,7 @@
 |---|---|---|
 | [0001](0001-record-architecture-decisions.md) | ADRで設計判断を記録する | 承認 |
 | [0002](0002-discovery-draft-from-website.md) | Webサイトを入力に、ディスカバリー用の叩き台を出力する | 承認 |
-| [0003](0003-target-sites.md) | 開発・検証の対象サイト | 承認 |
+| [0003](0003-target-sites.md) | 開発・検証の対象サイト | 置換（→ 0011） |
 | [0004](0004-llm-via-claude-code-headless.md) | LLM は Claude Code のヘッドレスモードで呼ぶ | 承認 |
 | [0005](0005-foundry-style-schema-as-source-of-truth.md) | Foundry 風の独自スキーマで定義し、表示用の形式はそこから生成する | 承認 |
 | [0006](0006-two-stage-generation-by-url-pattern.md) | URLパターン単位の2段階生成 | 承認 |
@@ -18,3 +18,6 @@
 | [0008](0008-evaluation-against-gold.md) | 人手の正解データで定量評価する | 承認 |
 | [0009](0009-journeys-and-state-machines.md) | ユーザージャーニーと状態遷移をオントロジーに加える | 承認 |
 | [0010](0010-ga4-events-as-reference-vocabulary.md) | GA4 の推奨イベントを参照語彙にし、ページ内の計測タグも手がかりにする | 承認 |
+| [0011](0011-validation-site-webscraper.md) | 検証用サイトを webscraper.io のテスト用ECサイトに変える | 承認 |
+| [0012](0012-crawl-scope-and-slug-patterns.md) | クロールの範囲を開始URLのパス以下に絞り、スラッグ形式のURLもパターンにまとめる | 承認 |
+| [0013](0013-inferred-flag-and-journey-extension.md) | 推定かどうかを inferred 項目で持ち、ジャーニーは確認できた起点の先だけを補う | 承認 |

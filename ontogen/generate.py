@@ -26,9 +26,10 @@ before the first client meeting, so it must be grounded and honest about uncerta
 - Model values that are attributes (price, rating, color) as properties, not object types, unless they
   clearly have their own identity and attributes.
 - Infer Action Types from forms, buttons and described processes (e.g. "Add to basket" -> AddToBasket).
-  An action may imply an object type that is not displayed (e.g. Basket); include it, and say in its
-  description that it is inferred.
-- Every object type, link type and action type needs at least one evidence item. `quote` must be copied
+  An action may imply an object type that is not displayed (e.g. Basket); include it with `inferred: true`.
+- Set `inferred: true` on every object, link and action that the website does not show directly. Do not attach
+  weak evidence (file names, CSS classes, unrelated text) to make an inferred element look observed.
+- Every observed (inferred: false) object type, link type and action type needs at least one evidence item. `quote` must be copied
   verbatim from the given page data (short, <= 100 chars). Never invent quotes.
 - If the page data has `tracking` (GTM / GA4 tags and the event names the page sends), treat those events as
   operations that really happen on this site.
@@ -53,6 +54,9 @@ JOURNEY_GUIDELINES = """\
 - Build `journeys`: the flows a user goes through to reach a goal (e.g. sign in -> view item -> add to wishlist
   -> add to cart -> check out -> purchase complete). Order the steps as they happen. Each step references an
   action_types id; add missing actions (and the objects they create, e.g. Order) as inferred elements.
+- Only extend a journey beyond what is observed when the site shows the entry point of that flow (e.g. an
+  "Add to cart" button implies a cart and a checkout). If the site has no such entry point, or says it does
+  not sell (e.g. "not for sale"), do not invent the flow; ask about it in `open_questions` instead.
 - Mark a step `observed: true` only when the website shows it (a page, form, button or tracking event). Steps you
   add from typical {domain_hint} flows are `observed: false` and need no evidence. Add an open question for the
   important unobserved steps (e.g. whether guests can check out).
@@ -76,7 +80,10 @@ def _merge_prompt(site_map: list[dict], fragments: list[Ontology], lang: str) ->
         "- Merge properties; drop properties that are really UI noise.\n"
         "- Make sure every link/action references existing object type IDs.\n"
         "- Keep the strongest evidence items (max 3 per element).\n"
-        "- Consolidate and deduplicate open_questions; add questions about the business as a whole.\n\n"
+        "- Consolidate and deduplicate open_questions; add questions about the business as a whole.\n"
+        "- Keep `summary` to 2-3 short sentences (about 150 Japanese characters): what the site is, its core object\n"
+        "  types, and the most important thing the site does not show. Do not list objects, properties or actions\n"
+        "  one by one (they are already in the ontology), and do not use numbered or bulleted lists.\n\n"
         + JOURNEY_GUIDELINES.format(domain_hint="e-commerce", ga4=ga4)
         + "\n"
         "# Site map (URL patterns crawled)\n"

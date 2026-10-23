@@ -58,7 +58,7 @@ action_types:
   - id: WriteReview|SubmitReview|PostReview
     optional: true
   # 閲覧の操作。サイトで確認できるが、ジャーニーを出力する前（ADR 0009）は正解に含めていなかった
-  - id: ViewProductList|ViewItemList|BrowseProducts
+  - id: ViewProductList|ViewItemList|BrowseProducts|ViewBookList
     optional: true
   - id: BrowseCategory|ViewCategory|SelectCategory
     optional: true

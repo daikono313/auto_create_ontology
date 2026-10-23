@@ -1,0 +1,52 @@
+# webscraper.io のテスト用ECサイトの正解オントロジー（人手作成）
+# 対象: https://webscraper.io/test-sites/e-commerce/allinone
+# 作成日: 2026-10-23（生成結果を見る前に、トップ・カテゴリ一覧・商品詳細のページから作成）
+# 書式は gold/books_toscrape.yaml と ADR 0008 を参照
+
+object_types:
+  - id: Product|Item|Laptop
+    properties:
+      - name|title|product_name
+      - price
+      - description|product_description
+      - review_count|number_of_reviews|reviews_count|num_reviews
+      - rating|star_rating|average_rating
+      - image_url|image|image_path
+      - ?product_id|id|item_id
+      - ?currency|price_currency
+      - ?product_url|url
+  - id: Category|ProductCategory
+    properties:
+      - name|category_name
+      - ?category_id|id|slug
+      - ?item_count|product_count
+  # 商品詳細ページの HDD の選択肢（128 / 256 / 512 / 1024）。選べない容量は無効表示になる
+  - id: ProductVariant|Variant|ProductOption|StorageOption|Swatch|SkuOption
+  - id: Subcategory|SubCategory
+    optional: true
+  - id: Review|CustomerReview
+    optional: true
+
+link_types:
+  - between: [Product|Item|Laptop, Category|ProductCategory]
+  - between: [Product|Item|Laptop, ProductVariant|Variant|ProductOption|StorageOption|Swatch|SkuOption]
+  - between: [Category|ProductCategory, Category|ProductCategory]
+    optional: true
+  - between: [Subcategory|SubCategory, Category|ProductCategory]
+    optional: true
+  - between: [Product|Item|Laptop, Subcategory|SubCategory]
+    optional: true
+  - between: [Review|CustomerReview, Product|Item|Laptop]
+    optional: true
+
+# カートや購入のボタンはない。閲覧と選択肢の切り替えだけ
+action_types:
+  - id: SelectVariant|SelectOption|SelectSwatch|SelectStorage|ChooseVariant
+  - id: ViewProductList|ViewItemList|BrowseProducts
+    optional: true
+  - id: BrowseCategory|ViewCategory|SelectCategory
+    optional: true
+  - id: SelectProduct|SelectItem
+    optional: true
+  - id: ViewProduct|ViewItem|ViewProductDetail
+    optional: true

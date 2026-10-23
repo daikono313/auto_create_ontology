@@ -28,6 +28,7 @@ class ObjectType(BaseModel):
     id: str = Field(description="PascalCase の英語名（単数形）")
     description: str
     primary_key: str | None = Field(default=None, description="主キーになりそうなプロパティ名")
+    inferred: bool = Field(description="サイトに表示されておらず、ボタン・件数・典型的な流れなどから推定したら true")
     properties: list[Property] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
 
@@ -38,12 +39,14 @@ class LinkType(BaseModel):
     target: str = Field(description="終点の ObjectType.id")
     cardinality: Cardinality = Field(description="source から見た多重度")
     description: str
+    inferred: bool = Field(description="サイトに表示されておらず、ボタン・件数・典型的な流れなどから推定したら true")
     evidence: list[Evidence] = Field(default_factory=list)
 
 
 class ActionType(BaseModel):
     id: str = Field(description="PascalCase の動詞句（例: AddToCart）")
     description: str
+    inferred: bool = Field(description="サイトに表示されておらず、ボタン・件数・典型的な流れなどから推定したら true")
     actor: str | None = Field(default=None, description="実行主体（ObjectType.id または役割名）")
     affects: list[str] = Field(default_factory=list, description="作成・更新される ObjectType.id")
     ga4_event: str | None = Field(default=None, description="対応する GA4 の推奨イベント名（例: add_to_cart）。なければ null")

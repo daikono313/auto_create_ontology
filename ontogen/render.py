@@ -68,7 +68,7 @@ def to_report(onto: Ontology, evidence_check: dict, site_url: str) -> str:
 
     out += ["## Object Types", ""]
     for o in onto.object_types:
-        out += [f"### {o.id}", "", o.description, ""]
+        out += [f"### {o.id}{'【推定】' if o.inferred else ''}", "", o.description, ""]
         if o.properties:
             out += ["| Property | Type | 説明 |", "|---|---|---|"]
             for p in o.properties:
@@ -79,9 +79,10 @@ def to_report(onto: Ontology, evidence_check: dict, site_url: str) -> str:
         out += [f"- 根拠: [{e.quote}]({e.url})" for e in o.evidence] + [""]
 
     out += ["## Link Types", "", "| Link | Source | Target | 多重度 | 説明 |", "|---|---|---|---|---|"]
-    out += [f"| `{l.id}` | {l.source} | {l.target} | {l.cardinality} | {l.description} |" for l in onto.link_types]
+    out += [f"| `{l.id}`{'【推定】' if l.inferred else ''} | {l.source} | {l.target} | {l.cardinality} | {l.description} |"
+            for l in onto.link_types]
     out += ["", "## Action Types", "", "| Action | 実行者 | 影響する Object | GA4 イベント | 説明 |", "|---|---|---|---|---|"]
-    out += [f"| `{a.id}` | {a.actor or '-'} | {', '.join(a.affects)} | {a.ga4_event or '-'} | {a.description} |"
+    out += [f"| `{a.id}`{'【推定】' if a.inferred else ''} | {a.actor or '-'} | {', '.join(a.affects)} | {a.ga4_event or '-'} | {a.description} |"
             for a in onto.action_types]
 
     if onto.journeys:

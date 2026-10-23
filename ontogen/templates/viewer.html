@@ -179,7 +179,7 @@ __MMD__
   const onto = JSON.parse(document.getElementById("data").textContent);
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const isInferred = (d) => /^【推定/.test(d || "");
+  const isInferred = (el) => el.inferred;
   const card = { one_to_one: "1 : 1", one_to_many: "1 : N", many_to_one: "N : 1", many_to_many: "N : N" };
 
   $("domain").textContent = onto.domain;
@@ -220,7 +220,7 @@ __MMD__
     const acts = onto.action_types.filter((a) => (a.affects || []).includes(o.id));
     $("detail").innerHTML = `
       <div class="detail-head">
-        <h2>${esc(o.id)}${isInferred(o.description) ? '<span class="tag inferred">推定</span>' : ""}</h2>
+        <h2>${esc(o.id)}${isInferred(o) ? '<span class="tag inferred">推定</span>' : ""}</h2>
         <p>${esc(o.description)}</p>
       </div>
       <div><h3>Properties</h3>${props}</div>
@@ -232,13 +232,13 @@ __MMD__
   $("objlist").innerHTML = onto.object_types.map((o) => `
     <button class="objbtn" data-id="${esc(o.id)}" aria-current="false">
       <span class="mono">${esc(o.id)}</span>
-      <span>${isInferred(o.description) ? '<span class="tag inferred">推定</span> ' : ""}<span class="count">${o.properties.length}</span></span>
+      <span>${isInferred(o) ? '<span class="tag inferred">推定</span> ' : ""}<span class="count">${o.properties.length}</span></span>
     </button>`).join("");
   $("objlist").addEventListener("click", (e) => { const b = e.target.closest(".objbtn"); if (b) render(b.dataset.id); });
   $("detail").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) { render(b.dataset.go); $("detail").scrollIntoView({ block: "nearest" }); } });
 
   $("actions").innerHTML = onto.action_types.map((a) => `
-    <tr><td class="name">${esc(a.id)}</td><td>${esc(a.actor || "-")}</td>
+    <tr><td class="name">${esc(a.id)}${isInferred(a) ? ' <span class="tag inferred">推定</span>' : ""}</td><td>${esc(a.actor || "-")}</td>
     <td class="mono">${(a.affects || []).map(esc).join(", ")}</td><td class="mono">${esc(a.ga4_event || "-")}</td><td>${esc(a.description)}</td></tr>`).join("");
   $("questions").innerHTML = onto.open_questions.map((q) => `<li>${esc(q)}</li>`).join("");
 

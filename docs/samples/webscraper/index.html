@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>webscraper.io オントロジー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: 設計図のような罫線の紙面。上に概要とER図、下は Object の一覧（左）と選んだ Object の詳細（右） */
+:root {
+  --bg: #f5f7f9;
+  --surface: #ffffff;
+  --ink: #18222e;
+  --muted: #5b6878;
+  --line: #d5dce4;
+  --accent: #1f4f8f;
+  --accent-soft: #e4ecf6;
+  --inferred: #8a5a00;
+  --inferred-soft: #fbf1dc;
+  --font-body: "IBM Plex Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161d; --surface: #17202a; --ink: #e3e9ef; --muted: #98a5b3; --line: #2b3744;
+    --accent: #8db6ec; --accent-soft: #1d2d42; --inferred: #e5b45a; --inferred-soft: #33281a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161d; --surface: #17202a; --ink: #e3e9ef; --muted: #98a5b3; --line: #2b3744;
+  --accent: #8db6ec; --accent-soft: #1d2d42; --inferred: #e5b45a; --inferred-soft: #33281a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 32px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.35; }
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 18px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; font-family: var(--font-mono); }
+header { display: grid; gap: 12px; }
+.summary { max-width: 72ch; color: var(--muted); white-space: pre-line; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 24px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats b { color: var(--ink); font-weight: 500; }
+
+section { display: grid; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.diagram { overflow-x: auto; padding: 16px; }
+.diagram pre { margin: 0; }
+
+.explorer { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .explorer { grid-template-columns: minmax(0, 1fr); } }
+.objlist { display: grid; gap: 4px; padding: 8px; }
+.objbtn {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.objbtn:hover { background: var(--accent-soft); }
+.objbtn[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.objbtn .count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.tag { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px; line-height: 18px; white-space: nowrap; }
+.tag.inferred { background: var(--inferred-soft); color: var(--inferred); }
+.tag.observed { background: var(--accent-soft); color: var(--accent); }
+
+.detail { padding: 20px; display: grid; gap: 20px; min-width: 0; }
+.detail-head { display: grid; gap: 6px; }
+.detail-head h2 { font-family: var(--font-mono); font-weight: 500; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+td.name { font-family: var(--font-mono); white-space: nowrap; }
+td.type { font-family: var(--font-mono); color: var(--muted); white-space: nowrap; }
+.pk { font-family: var(--font-mono); font-size: 11px; color: var(--accent); margin-left: 4px; }
+.enum { color: var(--muted); font-size: 13px; }
+.rel { display: grid; gap: 8px; }
+.rel-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.rel-row .arrow { font-family: var(--font-mono); white-space: nowrap; }
+.rel-row .arrow button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.rel-row p { color: var(--muted); }
+.evidence { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.evidence li { border-left: 2px solid var(--line); padding-left: 10px; }
+.evidence q { quotes: "「" "」"; }
+.evidence .src { color: var(--muted); font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
+.empty { color: var(--muted); font-size: 14px; }
+
+.actions { padding: 4px 0; }
+.questions { margin: 0; padding: 16px 20px 16px 40px; display: grid; gap: 8px; max-width: 90ch; }
+.questions li::marker { font-family: var(--font-mono); color: var(--muted); }
+.foot { color: var(--muted); font-size: 13px; }
+.note { color: var(--muted); font-size: 14px; }
+.stack { display: grid; gap: 16px; }
+.journey { padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.journey dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 0; font-size: 14px; }
+.journey dt { color: var(--muted); }
+.journey dd { margin: 0; }
+.journey pre, .state pre { margin: 0; overflow-x: auto; }
+td.num { font-family: var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.state { padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.state h3 { font-family: var(--font-mono); font-weight: 500; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Ontology draft · ontogen</span>
+    <h1 id="domain"></h1>
+    <p class="summary" id="summary"></p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section>
+    <h2>ER図</h2>
+    <div class="panel diagram">
+<pre class="mermaid">
+erDiagram
+  Product {
+    string product_id PK
+    string name
+    string description
+    decimal price
+    enum price_currency
+    integer review_count
+    decimal rating
+    url image_url
+    url product_url
+  }
+  Category {
+    string category_id PK
+    string name
+    url url
+    integer item_count
+  }
+  ProductVariant {
+    string variant_id PK
+    enum hdd_capacity
+    decimal price
+    boolean is_available
+  }
+  Review {
+    string review_id PK
+    integer rating
+    string body
+    datetime posted_at
+  }
+  Product }o--|| Category : belongs_to_category
+  Category }o--|| Category : has_parent_category
+  Product ||--o{ ProductVariant : has_variant
+  Product ||--o{ Review : has_review
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Object Types</h2>
+    <div class="explorer">
+      <nav class="panel objlist" id="objlist" aria-label="Object Type の一覧"></nav>
+      <article class="panel detail" id="detail" aria-live="polite"></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Action Types</h2>
+    <div class="panel actions scroll">
+      <table>
+        <thead><tr><th>Action</th><th>実行者</th><th>作成・更新する Object</th><th>GA4 イベント</th><th>説明</th></tr></thead>
+        <tbody id="actions"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="journey-section">
+    <h2>ユーザージャーニー</h2>
+    <p class="note">破線のステップと「推定」のステップは、サイトでは確認できず、典型的な流れから補ったもの。</p>
+    <div class="stack" id="journeys"></div>
+  </section>
+
+  <section id="state-section">
+    <h2>状態遷移</h2>
+    <div class="state-grid" id="states"></div>
+  </section>
+
+  <section>
+    <h2>ヒアリングで確認すること</h2>
+    <ol class="panel questions" id="questions"></ol>
+  </section>
+
+  <p class="foot">対象サイト: <a href="https://webscraper.io/test-sites/e-commerce/allinone">https://webscraper.io/test-sites/e-commerce/allinone</a>。9 ページ（7 種類のURLパターン）から生成。【推定】は画面に表示されていない概念で、ボタンや表示件数などから推定したもの。</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script id="data" type="application/json">{"domain": "EC（スクレイピング練習用のデモECサイト：PC・タブレット・スマートフォン／webscraper.io Test Sites allinone）", "summary": "webscraper.io が提供するスクレイピング練習用のデモECサイトです。商品・階層カテゴリ・容量バリエーションのカタログを閲覧できます。「not for sale」と明記されており、カート・注文・顧客・決済といった取引系の仕組みや、GA4 のイベント送信は確認できませんでした。", "object_types": [{"id": "Product", "description": "デモサイトに掲載される商品（ノートPC・タブレット・スマートフォン）。一覧カード1枚または商品詳細ページ1件が1商品に対応する。名称・スペック説明・価格・レビュー件数を持つが、販売対象ではない。", "primary_key": "product_id", "inferred": false, "properties": [{"name": "product_id", "type": "string", "description": "商品の一意識別子。画面には出ていないが、商品詳細URL末尾の数値（例: 122, 32）が候補と推定。", "enum_values": [], "evidence": []}, {"name": "name", "type": "string", "description": "商品名。一覧では「...」で省略され、詳細ページでは正式名が表示される。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "name=MSI GL62M 7REX2"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone", "quote": "name=MSI GL62M 7REX..."}]}, {"name": "description", "type": "string", "description": "スペック（画面サイズ・CPU・メモリ・ストレージ・OS・色など）を並べた自由記述の説明文。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Lenovo V110-15IAP, 15.6\" HD, Celeron N3350 1.1GHz, 4GB, 128GB SSD, Windows 10 Home"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/tablets", "quote": "description=Black, 7\" IPS, Quad-Core 1.2GHz, 8GB, Android 4.2"}]}, {"name": "price", "type": "decimal", "description": "表示価格。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "price=$1199"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "price=$24.99"}]}, {"name": "price_currency", "type": "enum", "description": "価格の通貨コード。観測できたのは USD だけ。", "enum_values": ["USD"], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone", "quote": "priceCurrency=USD"}]}, {"name": "review_count", "type": "integer", "description": "レビュー件数（schema.org aggregateRating の集計値）。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "reviewCount=14"}]}, {"name": "rating", "type": "decimal", "description": "平均評価（星の数）。星アイコンは表示されるが、数値はページデータで確認できないため推定。", "enum_values": [], "evidence": []}, {"name": "image_url", "type": "url", "description": "商品画像のURL。テストサイトでは共通のプレースホルダー画像に見える。", "enum_values": [], "evidence": []}, {"name": "product_url", "type": "url", "description": "商品詳細ページのURL（商品名リンクの遷移先）。", "enum_values": [], "evidence": []}], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone", "quote": "$306.99 Aspire E1-510 15.6\", Pentium N3520 2.16GHz, 4GB, 500GB, Linux 2 reviews"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "$1199 MSI GL62M 7REX2"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "$24.99 Nokia 123 7 day battery 11 reviews"}]}, {"id": "Category", "description": "商品の分類。Computers（配下に Laptops / Tablets）と Phones（配下に Touch）の階層構造になっており、カテゴリごとに商品件数が表示される。", "primary_key": "category_id", "inferred": false, "properties": [{"name": "category_id", "type": "string", "description": "カテゴリの識別子。URLのスラッグ（computers, laptops, touch など）が候補と推定。", "enum_values": [], "evidence": []}, {"name": "name", "type": "string", "description": "カテゴリ名（Computers, Laptops, Tablets, Phones, Touch）。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "name=Laptops"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "name=Touch"}]}, {"name": "url", "type": "url", "description": "カテゴリ一覧ページのURL。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/tablets", "quote": "url=Tablets"}]}, {"name": "item_count", "type": "integer", "description": "カテゴリに属する商品数（例: Laptops 117件、Tablets 21件、Touch 9件）。", "enum_values": [], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "117 items"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/tablets", "quote": "21 items"}]}], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Home Computers Laptops Tablets Phones"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "Home Computers Phones Touch"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/tablets", "quote": "h1: Computers / Tablets"}]}, {"id": "ProductVariant", "description": "商品のバリエーション。商品詳細ページに HDD 容量（128/256/512/1024）を選ぶスウォッチがあるため、容量ごとのバリエーションと解釈した。独立した SKU なのか、表示上のオプションにすぎないのかは未確認。", "primary_key": "variant_id", "inferred": false, "properties": [{"name": "variant_id", "type": "string", "description": "バリエーションの識別子（推定）。", "enum_values": [], "evidence": []}, {"name": "hdd_capacity", "type": "enum", "description": "HDD/ストレージ容量の選択肢。", "enum_values": ["128", "256", "512", "1024"], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "HDD: 128 256 512 1024"}]}, {"name": "price", "type": "decimal", "description": "バリエーション別の価格（容量で価格が変わるかは未確認）。", "enum_values": [], "evidence": []}, {"name": "is_available", "type": "boolean", "description": "選択できるかどうか（選べない選択肢があるかは画面上で確認できない）。", "enum_values": [], "evidence": []}], "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "HDD: 128 256 512 1024"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/32", "quote": "HDD: 128 256 512 1024"}]}, {"id": "Review", "description": "商品に対する個別のレビュー。表示されるのは件数だけで、本文・投稿者・評点などは見えないため推定。", "primary_key": "review_id", "inferred": true, "properties": [{"name": "review_id", "type": "string", "description": "レビューの識別子（推定）。", "enum_values": [], "evidence": []}, {"name": "rating", "type": "integer", "description": "レビューの星評価（推定）。", "enum_values": [], "evidence": []}, {"name": "body", "type": "string", "description": "レビュー本文（推定）。", "enum_values": [], "evidence": []}, {"name": "posted_at", "type": "datetime", "description": "投稿日時（推定）。", "enum_values": [], "evidence": []}], "evidence": []}], "link_types": [{"id": "belongs_to_category", "source": "Product", "target": "Category", "cardinality": "many_to_one", "description": "商品はカテゴリ（Laptops, Tablets, Touch など）に属する。カテゴリ一覧ページに件数付きで商品が並ぶ。ただしトップや親カテゴリには横断の「Top items」枠があり、複数カテゴリに属せるかは未確認。", "inferred": false, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Computers / Laptops 117 items"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "Phones / Touch 9 items"}]}, {"id": "has_parent_category", "source": "Category", "target": "Category", "cardinality": "many_to_one", "description": "サブカテゴリは親カテゴリに属する（Laptops / Tablets は Computers、Touch は Phones の下）。", "inferred": false, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "h1: Computers / Laptops"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "Home Computers Phones Touch"}]}, {"id": "has_variant", "source": "Product", "target": "ProductVariant", "cardinality": "one_to_many", "description": "商品は複数の HDD 容量バリエーションを持つ。", "inferred": false, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "HDD: 128 256 512 1024"}]}, {"id": "has_review", "source": "Product", "target": "Review", "cardinality": "one_to_many", "description": "商品は複数のレビューを持ち、review_count はその集計値と推定。個別レビューは表示されていない。", "inferred": true, "evidence": []}], "action_types": [{"id": "ViewItemList", "description": "トップページの「Top items being scraped right now」や、カテゴリページの商品一覧（価格・説明・レビュー件数）を閲覧する。", "inferred": false, "actor": "訪問者", "affects": [], "ga4_event": "view_item_list", "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone", "quote": "Top items being scraped right now"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "h2: Products"}]}, {"id": "SelectCategory", "description": "サイドバーのカテゴリナビゲーションでカテゴリやサブカテゴリを選び、その商品一覧へ移動する。", "inferred": false, "actor": "訪問者", "affects": [], "ga4_event": null, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers", "quote": "Home Computers Laptops Tablets Phones"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones", "quote": "Phones category"}]}, {"id": "SelectItem", "description": "一覧で商品名リンクをクリックし、商品詳細ページへ移動する。", "inferred": false, "actor": "訪問者", "affects": [], "ga4_event": "select_item", "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Asus VivoBook..."}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/phones/touch", "quote": "Samsung Galaxy"}]}, {"id": "ViewItem", "description": "商品詳細ページで商品名・価格・説明・レビュー件数を確認する。", "inferred": false, "actor": "訪問者", "affects": [], "ga4_event": "view_item", "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "$1199 MSI GL62M 7REX2"}, {"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/32", "quote": "$306.99 Aspire E1-510"}]}, {"id": "SelectVariant", "description": "商品詳細ページのスウォッチで HDD 容量を選ぶ。", "inferred": false, "actor": "訪問者", "affects": [], "ga4_event": null, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "HDD: 128 256 512 1024"}]}], "journeys": [{"id": "browse_catalog", "name": "カテゴリから商品を探して詳細と容量を確認する", "actor": "訪問者（スクレイピング学習者を含むゲスト）", "goal": "掲載商品の名称・価格・スペック・レビュー件数・容量の選択肢を確認または取得する", "steps": [{"action": "ViewItemList", "description": "トップページで「Top items being scraped right now」の商品一覧を見る。", "ga4_event": "view_item_list", "observed": true, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone", "quote": "Top items being scraped right now"}]}, {"action": "SelectCategory", "description": "サイドバーで Computers > Laptops などのカテゴリやサブカテゴリを選ぶ。", "ga4_event": null, "observed": true, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Home Computers Laptops Tablets Phones"}]}, {"action": "ViewItemList", "description": "カテゴリの商品一覧（例: 117件のノートPC）を、価格・説明・レビュー件数で見比べる。", "ga4_event": "view_item_list", "observed": true, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Computers / Laptops 117 items"}]}, {"action": "SelectItem", "description": "気になる商品名のリンクをクリックする。", "ga4_event": "select_item", "observed": true, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops", "quote": "Lenovo V110-15..."}]}, {"action": "ViewItem", "description": "商品詳細ページで正式名・価格・仕様・レビュー件数を確認する。", "ga4_event": "view_item", "observed": true, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/122", "quote": "$1199 MSI GL62M 7REX2"}]}, {"action": "SelectVariant", "description": "HDD 容量のスウォッチを選ぶ。購入はできないため、フローはここで終わる。", "ga4_event": null, "observed": true, "evidence": [{"url": "https://webscraper.io/test-sites/e-commerce/allinone/product/32", "quote": "HDD: 128 256 512 1024"}]}]}], "state_machines": [], "open_questions": ["オントロジーの目的を確認したい。本サイトは「Items listed here are not for sale」と明記したスクレイピング練習用デモサイトです。EC 業務のモデル化なのか、スクレイピング対象データ（カタログ）のモデル化なのか。", "Web Scraper 本体のビジネス（Cloud の契約・料金プラン・拡張機能のユーザー）をオントロジーの対象に含めるか。", "カート・注文・決済・顧客アカウントは本当にないのか。どのページにもカート投入ボタンやログインフォームがないため、購買フロー（AddToCart 以降）は作っていません。", "HDD 容量の選択肢は、独立した SKU（ProductVariant）として管理しているのか、表示上のオプションにすぎないのか。容量で価格は変わるのか。選べない選択肢はあるのか。", "色違い（Iphone の White / Silver / Black、Galaxy Tab 3 の White / Yellow、Prestigio SmartBook の Dark Grey / Gold）は別の Product なのか、親商品とバリエーションの構造なのか。", "商品の主キーは何か。商品詳細URLの数値IDか、SKU・JAN などの業務キーがあるのか。", "商品は複数のカテゴリに属せるのか（many_to_one か many_to_many か）。カテゴリ階層は最大何段で、Home はカテゴリとして扱うのか。", "トップや親カテゴリの「Top items being scraped right now」は、何の指標（スクレイピング回数など）で選ばれ、並んでいるのか。それとも固定表示なのか。", "平均評価（星の数）の値はどこで管理し、どう算出しているのか。個別レビュー（評点・本文・投稿者・日時）のデータと投稿機能はあるのか。", "itemprop では LG Optimus にレビュー件数がないのに、本文には「11 reviews」と表示されている。表示値とデータが食い違うとき、どちらが正なのか。", "説明文に入っているスペック（画面サイズ・CPU・メモリ・ストレージ・OS・色・バッテリー）を、構造化された属性として持っているのか。一部の説明にある「1 gadam」は保証期間などの属性なのか。", "商品名の先頭にあるブランド・メーカー（Lenovo, Acer, Samsung, Apple, Nokia など）は独立したマスタとして管理しているのか。", "通貨は USD 固定なのか。価格履歴、セール価格、在庫数、販売状態（販売中・終売）を持っているのか。", "一覧の並び順の規則（価格の昇順に見える）は何か。並べ替えや絞り込みの機能はあるのか。", "GTM コンテナ（GTM-NVFPDWB）で計測しているイベントは何か。GA4 プロパティと EC 系の推奨イベント（view_item_list, select_item, view_item）は導入済みか。計測データの保管先と責任者は誰か。", "商品マスタやカテゴリマスタのデータオーナーは誰か。更新頻度はどのくらいか（テストデータの再生成やランダム化の有無も含めて）。"], "diagrams": {"journeys": {"browse_catalog": "flowchart LR\n  s1[\"1. ViewItemList<br/>view_item_list\"]\n  s2[\"2. SelectCategory\"]\n  s3[\"3. ViewItemList<br/>view_item_list\"]\n  s4[\"4. SelectItem<br/>select_item\"]\n  s5[\"5. ViewItem<br/>view_item\"]\n  s6[\"6. SelectVariant\"]\n  s1 --> s2\n  s2 --> s3\n  s3 --> s4\n  s4 --> s5\n  s5 --> s6"}, "states": {}}}</script>
+<script>
+(function () {
+  const onto = JSON.parse(document.getElementById("data").textContent);
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const isInferred = (el) => el.inferred;
+  const card = { one_to_one: "1 : 1", one_to_many: "1 : N", many_to_one: "N : 1", many_to_many: "N : N" };
+
+  $("domain").textContent = onto.domain;
+  $("summary").textContent = onto.summary;
+  const nProps = onto.object_types.reduce((n, o) => n + o.properties.length, 0);
+  $("stats").innerHTML = [
+    ["Object", onto.object_types.length], ["Property", nProps],
+    ["Link", onto.link_types.length], ["Action", onto.action_types.length],
+    ["Journey", (onto.journeys || []).length], ["状態遷移", (onto.state_machines || []).length],
+    ["確認事項", onto.open_questions.length],
+  ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join("");
+
+  function evidenceList(items) {
+    if (!items || !items.length) return "";
+    return `<ul class="evidence">${items.map((e) => `<li><q>${esc(e.quote)}</q><br><a class="src" href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.url.replace(/^https?:\/\//, ""))}</a></li>`).join("")}</ul>`;
+  }
+
+  function render(id) {
+    const o = onto.object_types.find((x) => x.id === id) || onto.object_types[0];
+    document.querySelectorAll(".objbtn").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === o.id)));
+
+    const props = o.properties.length
+      ? `<div class="scroll"><table><thead><tr><th>Property</th><th>型</th><th>説明</th></tr></thead><tbody>${o.properties.map((p) => `
+          <tr><td class="name">${esc(p.name)}${p.name === o.primary_key ? '<span class="pk">PK</span>' : ""}</td>
+          <td class="type">${esc(p.type)}</td>
+          <td>${esc(p.description)}${p.enum_values && p.enum_values.length ? `<div class="enum">値: ${p.enum_values.map(esc).join(" / ")}</div>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+      : `<p class="empty">プロパティはありません。</p>`;
+
+    const links = onto.link_types.filter((l) => l.source === o.id || l.target === o.id);
+    const rel = links.length
+      ? `<div class="rel">${links.map((l) => {
+          const other = l.source === o.id ? l.target : l.source;
+          const dir = l.source === o.id ? `${esc(o.id)} → <button data-go="${esc(other)}">${esc(other)}</button>` : `<button data-go="${esc(other)}">${esc(other)}</button> → ${esc(o.id)}`;
+          return `<div class="rel-row"><span class="arrow">${dir}</span><span><code>${esc(l.id)}</code> · ${card[l.cardinality] || esc(l.cardinality)}</span><span></span><p>${esc(l.description)}</p></div>`;
+        }).join("")}</div>`
+      : `<p class="empty">関係はありません。</p>`;
+
+    const acts = onto.action_types.filter((a) => (a.affects || []).includes(o.id));
+    $("detail").innerHTML = `
+      <div class="detail-head">
+        <h2>${esc(o.id)}${isInferred(o) ? '<span class="tag inferred">推定</span>' : ""}</h2>
+        <p>${esc(o.description)}</p>
+      </div>
+      <div><h3>Properties</h3>${props}</div>
+      <div><h3>関係</h3>${rel}</div>
+      ${acts.length ? `<div><h3>この Object を作成・更新する Action</h3><p>${acts.map((a) => `<code>${esc(a.id)}</code>`).join("、")}</p></div>` : ""}
+      <div><h3>根拠</h3>${evidenceList(o.evidence) || '<p class="empty">根拠はありません。</p>'}</div>`;
+  }
+
+  $("objlist").innerHTML = onto.object_types.map((o) => `
+    <button class="objbtn" data-id="${esc(o.id)}" aria-current="false">
+      <span class="mono">${esc(o.id)}</span>
+      <span>${isInferred(o) ? '<span class="tag inferred">推定</span> ' : ""}<span class="count">${o.properties.length}</span></span>
+    </button>`).join("");
+  $("objlist").addEventListener("click", (e) => { const b = e.target.closest(".objbtn"); if (b) render(b.dataset.id); });
+  $("detail").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) { render(b.dataset.go); $("detail").scrollIntoView({ block: "nearest" }); } });
+
+  $("actions").innerHTML = onto.action_types.map((a) => `
+    <tr><td class="name">${esc(a.id)}${isInferred(a) ? ' <span class="tag inferred">推定</span>' : ""}</td><td>${esc(a.actor || "-")}</td>
+    <td class="mono">${(a.affects || []).map(esc).join(", ")}</td><td class="mono">${esc(a.ga4_event || "-")}</td><td>${esc(a.description)}</td></tr>`).join("");
+  $("questions").innerHTML = onto.open_questions.map((q) => `<li>${esc(q)}</li>`).join("");
+
+  render(onto.object_types[0] && onto.object_types[0].id);
+
+  // Mermaid のテキストは HTML として解釈させないよう textContent で入れる
+  function diagram(text) {
+    const pre = document.createElement("pre");
+    pre.className = "mermaid";
+    pre.textContent = text;
+    return pre;
+  }
+  const chip = (observed) => observed ? '<span class="tag observed">確認済み</span>' : '<span class="tag inferred">推定</span>';
+
+  const journeys = onto.journeys || [];
+  $("journey-section").hidden = !journeys.length;
+  journeys.forEach((j) => {
+    const el = document.createElement("article");
+    el.className = "panel journey";
+    el.innerHTML = `<h3>${esc(j.name)}</h3>
+      <dl><dt>実行者</dt><dd>${esc(j.actor)}</dd><dt>目的</dt><dd>${esc(j.goal)}</dd></dl>
+      <div class="slot"></div>
+      <div class="scroll"><table><thead><tr><th>#</th><th>Action</th><th>GA4 イベント</th><th>確認</th><th>内容</th></tr></thead><tbody>
+      ${j.steps.map((st, i) => `<tr><td class="num">${i + 1}</td><td class="name">${esc(st.action)}</td><td class="type">${esc(st.ga4_event || "-")}</td>
+        <td>${chip(st.observed)}</td><td>${esc(st.description)}</td></tr>`).join("")}
+      </tbody></table></div>`;
+    el.querySelector(".slot").replaceWith(diagram(onto.diagrams.journeys[j.id]));
+    $("journeys").appendChild(el);
+  });
+
+  const machines = onto.state_machines || [];
+  $("state-section").hidden = !machines.length;
+  machines.forEach((sm) => {
+    const key = `${sm.object_type}.${sm.state_property}`;
+    const el = document.createElement("article");
+    el.className = "panel state";
+    el.innerHTML = `<h3>${esc(key)} ${chip(sm.observed)}</h3><p class="note">${esc(sm.description)}</p><div class="slot"></div>`;
+    el.querySelector(".slot").replaceWith(diagram(onto.diagrams.states[key]));
+    $("states").appendChild(el);
+  });
+
+  if (window.mermaid) {
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", flowchart: { useMaxWidth: false } });
+  }
+})();
+</script>
+</body>
+</html>

@@ -5,6 +5,17 @@ Palantir Foundry の Object Type / Property / Link Type / Action Type に沿っ�
 あわせて、ユーザーが目的を達成するまでの流れ（ユーザージャーニー）と、Basket や Order の状態遷移も出力する。
 ジャーニーの各ステップには、対応する GA4 の推奨イベント名（`view_item`、`add_to_cart`、`purchase` など）を付ける。
 
+## サンプル
+
+スクレイピング練習用のサイトから生成した画面を、GitHub Pages で公開している。
+
+| サイト | 内容 | 画面 |
+|---|---|---|
+| [books.toscrape.com](https://books.toscrape.com/) | 書籍のデモ書店。カートのボタンがあるので、購入までのジャーニーを推定している | [開く](https://daikono313.github.io/auto_create_ontology/samples/books/) |
+| [webscraper.io のテスト用ECサイト](https://webscraper.io/test-sites/e-commerce/allinone) | パソコンと携帯電話のデモカタログ。販売していないので、ジャーニーは閲覧と容量の選択まで | [開く](https://daikono313.github.io/auto_create_ontology/samples/webscraper/) |
+
+公開しているのは `docs/samples/<slug>/index.html`。生成し直したら、`out/<slug>/viewer.html` をここにコピーして push する。
+
 ## 画面
 
 `ontogen run` を実行すると、生成したオントロジーを見るための画面（`out/<slug>/viewer.html`）が出力される。

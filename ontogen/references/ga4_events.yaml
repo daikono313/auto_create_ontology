@@ -1,0 +1,35 @@
+# GA4 の推奨イベント（EC・共通・リード獲得）
+# 出典: https://developers.google.com/analytics/devguides/collection/ga4/reference/events（2026-10-23 に確認）
+# stage はジャーニー上のおおよその位置で、ontogen が付けた分類（GA4 の定義ではない）
+
+events:
+  # 共通
+  - {name: sign_up, stage: account, params: [method]}
+  - {name: login, stage: account, params: [method]}
+  - {name: search, stage: discover, params: [search_term]}
+  - {name: share, stage: engage, params: [method, content_type, item_id]}
+  - {name: select_content, stage: engage, params: [content_type, content_id]}
+
+  # EC
+  - {name: view_promotion, stage: discover, params: [creative_name, creative_slot, promotion_id, promotion_name, items]}
+  - {name: select_promotion, stage: discover, params: [creative_name, creative_slot, promotion_id, promotion_name, items]}
+  - {name: view_item_list, stage: discover, params: [item_list_id, item_list_name, items]}
+  - {name: select_item, stage: discover, params: [item_list_id, item_list_name, items]}
+  - {name: view_item, stage: consider, params: [currency, value, items]}
+  - {name: add_to_wishlist, stage: consider, params: [currency, value, items]}
+  - {name: add_to_cart, stage: cart, params: [currency, value, items]}
+  - {name: remove_from_cart, stage: cart, params: [currency, value, items]}
+  - {name: view_cart, stage: cart, params: [currency, value, items]}
+  - {name: begin_checkout, stage: checkout, params: [currency, value, coupon, items]}
+  - {name: add_shipping_info, stage: checkout, params: [currency, value, coupon, shipping_tier, items]}
+  - {name: add_payment_info, stage: checkout, params: [currency, value, coupon, payment_type, items]}
+  - {name: purchase, stage: purchase, params: [currency, value, customer_type, transaction_id, coupon, shipping, tax, items]}
+  - {name: refund, stage: after_purchase, params: [currency, transaction_id, value, coupon, shipping, tax, items]}
+
+  # リード獲得
+  - {name: generate_lead, stage: lead, params: [currency, value, lead_source]}
+
+# items 配列の各要素が持つパラメータ（item_id か item_name のどちらかは必須）
+item_params: [item_id, item_name, affiliation, coupon, discount, index, item_brand, item_category, item_category2,
+              item_category3, item_category4, item_category5, item_list_id, item_list_name, item_variant, location_id,
+              price, quantity]

@@ -14,6 +14,20 @@ def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def tracking(html: str) -> dict:
+    """計測タグ（GTM・GA4）の ID と、スクリプトが送信しているイベント名を抜き出す（ADR 0010）。"""
+    events = set(re.findall(r"""gtag\(\s*['"]event['"]\s*,\s*['"]([\w.-]+)['"]""", html))
+    for push in re.findall(r"dataLayer\.push\(([^;]{0,500})", html):
+        events.update(re.findall(r"""['"]?event['"]?\s*:\s*['"]([\w.-]+)['"]""", push))
+    # Shopify のカスタムピクセルなど、analytics.subscribe("product_viewed", ...) の形
+    events.update(re.findall(r"""analytics\.subscribe\(\s*['"]([\w.-]+)['"]""", html))
+    return {
+        "gtm_container_ids": sorted(set(re.findall(r"\bGTM-[A-Z0-9]{4,}\b", html))),
+        "ga4_measurement_ids": sorted(set(re.findall(r"\bG-[A-Z0-9]{6,}\b", html))),
+        "events": sorted(events),
+    }
+
+
 def page_text(html: str) -> str:
     """根拠引用の検証に使う、ページ全体の可視テキスト。"""
     soup = BeautifulSoup(html, "lxml")
@@ -26,6 +40,7 @@ def page_text(html: str) -> str:
 
 def digest(url: str, html: str) -> dict:
     soup = BeautifulSoup(html, "lxml")
+    tags = tracking(html)
 
     json_ld = []
     for s in soup.find_all("script", type="application/ld+json"):
@@ -77,6 +92,7 @@ def digest(url: str, html: str) -> dict:
         "tables": tables,
         "forms": forms,
         "json_ld": json_ld,
+        "tracking": tags if any(tags.values()) else None,
         "itemprops": itemprops[:MAX_CLASS_HINTS],
         "class_hints": class_hints[:MAX_CLASS_HINTS],
         "images": images[:5],

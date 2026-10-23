@@ -57,3 +57,12 @@ action_types:
   - id: AddToBasket|AddToCart|AddBookToBasket
   - id: WriteReview|SubmitReview|PostReview
     optional: true
+  # 閲覧の操作。サイトで確認できるが、ジャーニーを出力する前（ADR 0009）は正解に含めていなかった
+  - id: ViewProductList|ViewItemList|BrowseProducts
+    optional: true
+  - id: BrowseCategory|ViewCategory|SelectCategory
+    optional: true
+  - id: SelectBook|SelectItem|SelectProduct
+    optional: true
+  - id: ViewBookDetail|ViewItem|ViewProduct|ViewProductDetail
+    optional: true

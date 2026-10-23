@@ -2,6 +2,8 @@
 
 Webサイトを解析して、ディスカバリー（初回ヒアリング前）用のオントロジー叩き台を自動生成するプロトタイプ。
 Palantir Foundry の Object Type / Property / Link Type / Action Type に沿って出力する。
+あわせて、ユーザーが目的を達成するまでの流れ（ユーザージャーニー）と、Basket や Order の状態遷移も出力する。
+ジャーニーの各ステップには、対応する GA4 の推奨イベント名（`view_item`、`add_to_cart`、`purchase` など）を付ける。
 
 ## 画面
 
@@ -17,15 +19,25 @@ ER図で Object Type どうしの関係を確認できる。
 
 ![Object Type の詳細](docs/images/viewer-object.png)
 
+ユーザージャーニーでは、目的を達成するまでのステップを、対応する GA4 のイベント名とあわせて順に示す。
+サイトで確認できなかったステップは、破線と「推定」のラベルで区別する。
+books.toscrape.com ではカートに入れるところまでしか確認できないので、購入手続きから注文確定までは推定になっている。
+
+![ユーザージャーニー](docs/images/viewer-journey.png)
+
+状態遷移では、Basket や Order などが取りうる状態と、どの Action で状態が移るかを示す。
+
+![状態遷移](docs/images/viewer-states.png)
+
 このほか、Action Type の一覧と、ヒアリングで確認すべき事項も同じ画面に並ぶ。
 
 ## 仕組み
 
 ```
 クロール（同一ホスト・URLパターンごとに代表ページだけ取得、robots.txt 準拠）
-  → ページ要約（見出し・表・フォーム・パンくず・JSON-LD・class 属性・画像の alt 属性）
+  → ページ要約（見出し・表・フォーム・パンくず・JSON-LD・class 属性・画像の alt 属性・GTM/GA4 の計測タグ）
   → [LLM] ページパターンごとに概念候補を抽出
-  → [LLM] 候補を統合・名寄せ
+  → [LLM] 候補を統合・名寄せし、GA4 の推奨イベントを参照してジャーニーと状態遷移を組み立てる
   → 根拠引用の照合（ハルシネーション検知）
   → YAML / Mermaid ER図 / Markdownレポート
 ```

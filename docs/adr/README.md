@@ -16,3 +16,5 @@
 | [0006](0006-two-stage-generation-by-url-pattern.md) | URLパターン単位の2段階生成 | 承認 |
 | [0007](0007-evidence-required-and-verified.md) | すべての要素に根拠引用を必須にし、機械的に照合する | 承認 |
 | [0008](0008-evaluation-against-gold.md) | 人手の正解データで定量評価する | 承認 |
+| [0009](0009-journeys-and-state-machines.md) | ユーザージャーニーと状態遷移をオントロジーに加える | 承認 |
+| [0010](0010-ga4-events-as-reference-vocabulary.md) | GA4 の推奨イベントを参照語彙にし、ページ内の計測タグも手がかりにする | 承認 |

@@ -75,6 +75,7 @@ section { display: grid; gap: 12px; }
 .objbtn .count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 .tag { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px; line-height: 18px; white-space: nowrap; }
 .tag.inferred { background: var(--inferred-soft); color: var(--inferred); }
+.tag.observed { background: var(--accent-soft); color: var(--accent); }
 
 .detail { padding: 20px; display: grid; gap: 20px; min-width: 0; }
 .detail-head { display: grid; gap: 6px; }
@@ -102,6 +103,17 @@ td.type { font-family: var(--font-mono); color: var(--muted); white-space: nowra
 .questions { margin: 0; padding: 16px 20px 16px 40px; display: grid; gap: 8px; max-width: 90ch; }
 .questions li::marker { font-family: var(--font-mono); color: var(--muted); }
 .foot { color: var(--muted); font-size: 13px; }
+.note { color: var(--muted); font-size: 14px; }
+.stack { display: grid; gap: 16px; }
+.journey { padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.journey dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 0; font-size: 14px; }
+.journey dt { color: var(--muted); }
+.journey dd { margin: 0; }
+.journey pre, .state pre { margin: 0; overflow-x: auto; }
+td.num { font-family: var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.state { padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.state h3 { font-family: var(--font-mono); font-weight: 500; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -135,10 +147,21 @@ __MMD__
     <h2>Action Types</h2>
     <div class="panel actions scroll">
       <table>
-        <thead><tr><th>Action</th><th>実行者</th><th>作成・更新する Object</th><th>説明</th></tr></thead>
+        <thead><tr><th>Action</th><th>実行者</th><th>作成・更新する Object</th><th>GA4 イベント</th><th>説明</th></tr></thead>
         <tbody id="actions"></tbody>
       </table>
     </div>
+  </section>
+
+  <section id="journey-section">
+    <h2>ユーザージャーニー</h2>
+    <p class="note">破線のステップと「推定」のステップは、サイトでは確認できず、典型的な流れから補ったもの。</p>
+    <div class="stack" id="journeys"></div>
+  </section>
+
+  <section id="state-section">
+    <h2>状態遷移</h2>
+    <div class="state-grid" id="states"></div>
   </section>
 
   <section>
@@ -165,6 +188,7 @@ __MMD__
   $("stats").innerHTML = [
     ["Object", onto.object_types.length], ["Property", nProps],
     ["Link", onto.link_types.length], ["Action", onto.action_types.length],
+    ["Journey", (onto.journeys || []).length], ["状態遷移", (onto.state_machines || []).length],
     ["確認事項", onto.open_questions.length],
   ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join("");
 
@@ -215,14 +239,50 @@ __MMD__
 
   $("actions").innerHTML = onto.action_types.map((a) => `
     <tr><td class="name">${esc(a.id)}</td><td>${esc(a.actor || "-")}</td>
-    <td class="mono">${(a.affects || []).map(esc).join(", ")}</td><td>${esc(a.description)}</td></tr>`).join("");
+    <td class="mono">${(a.affects || []).map(esc).join(", ")}</td><td class="mono">${esc(a.ga4_event || "-")}</td><td>${esc(a.description)}</td></tr>`).join("");
   $("questions").innerHTML = onto.open_questions.map((q) => `<li>${esc(q)}</li>`).join("");
 
   render(onto.object_types[0] && onto.object_types[0].id);
 
+  // Mermaid のテキストは HTML として解釈させないよう textContent で入れる
+  function diagram(text) {
+    const pre = document.createElement("pre");
+    pre.className = "mermaid";
+    pre.textContent = text;
+    return pre;
+  }
+  const chip = (observed) => observed ? '<span class="tag observed">確認済み</span>' : '<span class="tag inferred">推定</span>';
+
+  const journeys = onto.journeys || [];
+  $("journey-section").hidden = !journeys.length;
+  journeys.forEach((j) => {
+    const el = document.createElement("article");
+    el.className = "panel journey";
+    el.innerHTML = `<h3>${esc(j.name)}</h3>
+      <dl><dt>実行者</dt><dd>${esc(j.actor)}</dd><dt>目的</dt><dd>${esc(j.goal)}</dd></dl>
+      <div class="slot"></div>
+      <div class="scroll"><table><thead><tr><th>#</th><th>Action</th><th>GA4 イベント</th><th>確認</th><th>内容</th></tr></thead><tbody>
+      ${j.steps.map((st, i) => `<tr><td class="num">${i + 1}</td><td class="name">${esc(st.action)}</td><td class="type">${esc(st.ga4_event || "-")}</td>
+        <td>${chip(st.observed)}</td><td>${esc(st.description)}</td></tr>`).join("")}
+      </tbody></table></div>`;
+    el.querySelector(".slot").replaceWith(diagram(onto.diagrams.journeys[j.id]));
+    $("journeys").appendChild(el);
+  });
+
+  const machines = onto.state_machines || [];
+  $("state-section").hidden = !machines.length;
+  machines.forEach((sm) => {
+    const key = `${sm.object_type}.${sm.state_property}`;
+    const el = document.createElement("article");
+    el.className = "panel state";
+    el.innerHTML = `<h3>${esc(key)} ${chip(sm.observed)}</h3><p class="note">${esc(sm.description)}</p><div class="slot"></div>`;
+    el.querySelector(".slot").replaceWith(diagram(onto.diagrams.states[key]));
+    $("states").appendChild(el);
+  });
+
   if (window.mermaid) {
     const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-    mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral" });
+    mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", flowchart: { useMaxWidth: false } });
   }
 })();
 </script>

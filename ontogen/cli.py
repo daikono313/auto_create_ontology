@@ -6,7 +6,7 @@ from .crawl import crawl
 from .evaluate import evaluate
 from .extract import digest, page_text
 from .generate import generate, verify_evidence
-from .render import to_mermaid, to_report, to_yaml
+from .render import to_html, to_mermaid, to_report, to_yaml
 from .schema import Ontology
 
 
@@ -33,7 +33,8 @@ def cmd_run(args) -> None:
     (out / "ontology.yaml").write_text(to_yaml(onto))
     (out / "ontology.mmd").write_text(to_mermaid(onto))
     (out / "report.md").write_text(to_report(onto, check, args.url))
-    print(f"  完了: {out}/report.md（根拠一致 {check['verified']}/{check['checked']}）")
+    (out / "viewer.html").write_text(to_html(onto, args.url, len(pages), len({p["pattern"] for p in pages})))
+    print(f"  完了: {out}/viewer.html, {out}/report.md（根拠一致 {check['verified']}/{check['checked']}）")
 
     if args.gold:
         _print_eval(onto, args.gold)

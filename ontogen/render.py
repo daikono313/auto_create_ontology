@@ -1,6 +1,10 @@
-"""オントロジーを YAML / Mermaid ER図 / Markdownレポートに書き出す。"""
+"""オントロジーを YAML / Mermaid ER図 / Markdownレポート / HTMLビューアに書き出す。"""
 
+import html
+import json
 import re
+from importlib.resources import files
+from urllib.parse import urlparse
 
 import yaml
 
@@ -63,3 +67,15 @@ def to_report(onto: Ontology, evidence_check: dict, site_url: str) -> str:
         out += ["", "一致しなかった引用（要確認）:", ""]
         out += [f"- {u['element']}: 「{u['quote']}」 ({u['url']})" for u in evidence_check["unverified"]]
     return "\n".join(out) + "\n"
+
+
+def to_html(onto: Ontology, site_url: str, n_pages: int, n_patterns: int) -> str:
+    """ブラウザで直接開けるビューア。ER図の描画には CDN の mermaid を使う。"""
+    template = files("ontogen").joinpath("templates/viewer.html").read_text()
+    data = json.dumps(onto.model_dump(), ensure_ascii=False).replace("</", "<\\/")
+    return (template
+            .replace("__TITLE__", html.escape(f"{urlparse(site_url).netloc} オントロジー"))
+            .replace("__MMD__", html.escape(to_mermaid(onto)))
+            .replace("__SITE__", html.escape(site_url))
+            .replace("__CRAWL__", f"{n_pages} ページ（{n_patterns} 種類のURLパターン）")
+            .replace("__DATA__", data))

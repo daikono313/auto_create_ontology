@@ -3,6 +3,22 @@
 Webサイトを解析して、ディスカバリー（初回ヒアリング前）用のオントロジー叩き台を自動生成するプロトタイプ。
 Palantir Foundry の Object Type / Property / Link Type / Action Type に沿って出力する。
 
+## 画面
+
+`ontogen run` を実行すると、生成したオントロジーを見るための画面（`out/<slug>/viewer.html`）が出力される。
+ブラウザで直接開ける。次の画像は books.toscrape.com から生成した例。
+
+ER図で Object Type どうしの関係を確認できる。
+
+![ER図](docs/images/viewer-er.png)
+
+左の一覧で Object Type を選ぶと、プロパティ・関係・根拠（引用元のページ）が右に出る。
+画面に表示されていない概念（Basket など）には「推定」のラベルが付く。
+
+![Object Type の詳細](docs/images/viewer-object.png)
+
+このほか、Action Type の一覧と、ヒアリングで確認すべき事項も同じ画面に並ぶ。
+
 ## 仕組み
 
 ```
@@ -29,6 +45,7 @@ uv run ontogen eval out/books/ontology.yaml gold/books_toscrape.yaml
 
 | ファイル | 内容 |
 |---|---|
+| `viewer.html` | オントロジーの画面。ブラウザで直接開く（ER図の描画に CDN の mermaid を読み込むので、ネットワーク接続が必要） |
 | `report.md` | 顧客説明用レポート（ER図、各定義、ヒアリング事項、根拠の検証結果） |
 | `ontology.yaml` | オントロジー本体（根拠URL・引用付き） |
 | `ontology.mmd` | Mermaid ER図 |

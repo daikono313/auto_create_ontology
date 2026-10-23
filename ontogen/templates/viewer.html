@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: 設計図のような罫線の紙面。上に概要とER図、下は Object の一覧（左）と選んだ Object の詳細（右） */
+:root {
+  --bg: #f5f7f9;
+  --surface: #ffffff;
+  --ink: #18222e;
+  --muted: #5b6878;
+  --line: #d5dce4;
+  --accent: #1f4f8f;
+  --accent-soft: #e4ecf6;
+  --inferred: #8a5a00;
+  --inferred-soft: #fbf1dc;
+  --font-body: "IBM Plex Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161d; --surface: #17202a; --ink: #e3e9ef; --muted: #98a5b3; --line: #2b3744;
+    --accent: #8db6ec; --accent-soft: #1d2d42; --inferred: #e5b45a; --inferred-soft: #33281a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161d; --surface: #17202a; --ink: #e3e9ef; --muted: #98a5b3; --line: #2b3744;
+  --accent: #8db6ec; --accent-soft: #1d2d42; --inferred: #e5b45a; --inferred-soft: #33281a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 32px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.35; }
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 18px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; font-family: var(--font-mono); }
+header { display: grid; gap: 12px; }
+.summary { max-width: 72ch; color: var(--muted); white-space: pre-line; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 24px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats b { color: var(--ink); font-weight: 500; }
+
+section { display: grid; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.diagram { overflow-x: auto; padding: 16px; }
+.diagram pre { margin: 0; }
+
+.explorer { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .explorer { grid-template-columns: minmax(0, 1fr); } }
+.objlist { display: grid; gap: 4px; padding: 8px; }
+.objbtn {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.objbtn:hover { background: var(--accent-soft); }
+.objbtn[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.objbtn .count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.tag { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px; line-height: 18px; white-space: nowrap; }
+.tag.inferred { background: var(--inferred-soft); color: var(--inferred); }
+
+.detail { padding: 20px; display: grid; gap: 20px; min-width: 0; }
+.detail-head { display: grid; gap: 6px; }
+.detail-head h2 { font-family: var(--font-mono); font-weight: 500; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+td.name { font-family: var(--font-mono); white-space: nowrap; }
+td.type { font-family: var(--font-mono); color: var(--muted); white-space: nowrap; }
+.pk { font-family: var(--font-mono); font-size: 11px; color: var(--accent); margin-left: 4px; }
+.enum { color: var(--muted); font-size: 13px; }
+.rel { display: grid; gap: 8px; }
+.rel-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.rel-row .arrow { font-family: var(--font-mono); white-space: nowrap; }
+.rel-row .arrow button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.rel-row p { color: var(--muted); }
+.evidence { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.evidence li { border-left: 2px solid var(--line); padding-left: 10px; }
+.evidence q { quotes: "「" "」"; }
+.evidence .src { color: var(--muted); font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
+.empty { color: var(--muted); font-size: 14px; }
+
+.actions { padding: 4px 0; }
+.questions { margin: 0; padding: 16px 20px 16px 40px; display: grid; gap: 8px; max-width: 90ch; }
+.questions li::marker { font-family: var(--font-mono); color: var(--muted); }
+.foot { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Ontology draft · ontogen</span>
+    <h1 id="domain"></h1>
+    <p class="summary" id="summary"></p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section>
+    <h2>ER図</h2>
+    <div class="panel diagram">
+<pre class="mermaid">
+__MMD__
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Object Types</h2>
+    <div class="explorer">
+      <nav class="panel objlist" id="objlist" aria-label="Object Type の一覧"></nav>
+      <article class="panel detail" id="detail" aria-live="polite"></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Action Types</h2>
+    <div class="panel actions scroll">
+      <table>
+        <thead><tr><th>Action</th><th>実行者</th><th>作成・更新する Object</th><th>説明</th></tr></thead>
+        <tbody id="actions"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>ヒアリングで確認すること</h2>
+    <ol class="panel questions" id="questions"></ol>
+  </section>
+
+  <p class="foot">対象サイト: <a href="__SITE__">__SITE__</a>。__CRAWL__から生成。【推定】は画面に表示されていない概念で、ボタンや表示件数などから推定したもの。</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const onto = JSON.parse(document.getElementById("data").textContent);
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const isInferred = (d) => /^【推定/.test(d || "");
+  const card = { one_to_one: "1 : 1", one_to_many: "1 : N", many_to_one: "N : 1", many_to_many: "N : N" };
+
+  $("domain").textContent = onto.domain;
+  $("summary").textContent = onto.summary;
+  const nProps = onto.object_types.reduce((n, o) => n + o.properties.length, 0);
+  $("stats").innerHTML = [
+    ["Object", onto.object_types.length], ["Property", nProps],
+    ["Link", onto.link_types.length], ["Action", onto.action_types.length],
+    ["確認事項", onto.open_questions.length],
+  ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join("");
+
+  function evidenceList(items) {
+    if (!items || !items.length) return "";
+    return `<ul class="evidence">${items.map((e) => `<li><q>${esc(e.quote)}</q><br><a class="src" href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.url.replace(/^https?:\/\//, ""))}</a></li>`).join("")}</ul>`;
+  }
+
+  function render(id) {
+    const o = onto.object_types.find((x) => x.id === id) || onto.object_types[0];
+    document.querySelectorAll(".objbtn").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === o.id)));
+
+    const props = o.properties.length
+      ? `<div class="scroll"><table><thead><tr><th>Property</th><th>型</th><th>説明</th></tr></thead><tbody>${o.properties.map((p) => `
+          <tr><td class="name">${esc(p.name)}${p.name === o.primary_key ? '<span class="pk">PK</span>' : ""}</td>
+          <td class="type">${esc(p.type)}</td>
+          <td>${esc(p.description)}${p.enum_values && p.enum_values.length ? `<div class="enum">値: ${p.enum_values.map(esc).join(" / ")}</div>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+      : `<p class="empty">プロパティはありません。</p>`;
+
+    const links = onto.link_types.filter((l) => l.source === o.id || l.target === o.id);
+    const rel = links.length
+      ? `<div class="rel">${links.map((l) => {
+          const other = l.source === o.id ? l.target : l.source;
+          const dir = l.source === o.id ? `${esc(o.id)} → <button data-go="${esc(other)}">${esc(other)}</button>` : `<button data-go="${esc(other)}">${esc(other)}</button> → ${esc(o.id)}`;
+          return `<div class="rel-row"><span class="arrow">${dir}</span><span><code>${esc(l.id)}</code> · ${card[l.cardinality] || esc(l.cardinality)}</span><span></span><p>${esc(l.description)}</p></div>`;
+        }).join("")}</div>`
+      : `<p class="empty">関係はありません。</p>`;
+
+    const acts = onto.action_types.filter((a) => (a.affects || []).includes(o.id));
+    $("detail").innerHTML = `
+      <div class="detail-head">
+        <h2>${esc(o.id)}${isInferred(o.description) ? '<span class="tag inferred">推定</span>' : ""}</h2>
+        <p>${esc(o.description)}</p>
+      </div>
+      <div><h3>Properties</h3>${props}</div>
+      <div><h3>関係</h3>${rel}</div>
+      ${acts.length ? `<div><h3>この Object を作成・更新する Action</h3><p>${acts.map((a) => `<code>${esc(a.id)}</code>`).join("、")}</p></div>` : ""}
+      <div><h3>根拠</h3>${evidenceList(o.evidence) || '<p class="empty">根拠はありません。</p>'}</div>`;
+  }
+
+  $("objlist").innerHTML = onto.object_types.map((o) => `
+    <button class="objbtn" data-id="${esc(o.id)}" aria-current="false">
+      <span class="mono">${esc(o.id)}</span>
+      <span>${isInferred(o.description) ? '<span class="tag inferred">推定</span> ' : ""}<span class="count">${o.properties.length}</span></span>
+    </button>`).join("");
+  $("objlist").addEventListener("click", (e) => { const b = e.target.closest(".objbtn"); if (b) render(b.dataset.id); });
+  $("detail").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) { render(b.dataset.go); $("detail").scrollIntoView({ block: "nearest" }); } });
+
+  $("actions").innerHTML = onto.action_types.map((a) => `
+    <tr><td class="name">${esc(a.id)}</td><td>${esc(a.actor || "-")}</td>
+    <td class="mono">${(a.affects || []).map(esc).join(", ")}</td><td>${esc(a.description)}</td></tr>`).join("");
+  $("questions").innerHTML = onto.open_questions.map((q) => `<li>${esc(q)}</li>`).join("");
+
+  render(onto.object_types[0] && onto.object_types[0].id);
+
+  if (window.mermaid) {
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral" });
+  }
+})();
+</script>
+</body>
+</html>

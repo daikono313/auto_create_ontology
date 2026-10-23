@@ -11,8 +11,14 @@ from concurrent.futures import ThreadPoolExecutor
 from importlib.resources import files
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from .llm import call_structured
 from .schema import Ontology
+
+# 概要とドメイン名の上限（文字数）。プロンプトの指示だけでは守られないことがあるので、超えたら書き直させる
+SUMMARY_MAX_CHARS = 160
+DOMAIN_MAX_CHARS = 25
 
 GUIDELINES = """\
 # Goal
@@ -122,7 +128,33 @@ def generate(pages: list[dict], work_dir: Path, lang: str = "Japanese", model: s
         (frag_dir / f"{name}.json").write_text(frag.model_dump_json(indent=2))
 
     print("  merge")
-    return call_structured(_merge_prompt(site_map, fragments, lang), Ontology, cache_dir, model)
+    onto = call_structured(_merge_prompt(site_map, fragments, lang), Ontology, cache_dir, model)
+    return _shorten(onto, lang, cache_dir, model)
+
+
+class _Headline(BaseModel):
+    domain: str
+    summary: str
+
+
+def _shorten(onto: Ontology, lang: str, cache_dir: Path, model: str | None, attempts: int = 2) -> Ontology:
+    """domain と summary が上限を超えていたら、内容を足さずに短く書き直させる。"""
+    for _ in range(attempts):
+        if len(onto.domain) <= DOMAIN_MAX_CHARS and len(onto.summary) <= SUMMARY_MAX_CHARS:
+            return onto
+        print(f"  shorten: domain {len(onto.domain)}字, summary {len(onto.summary)}字")
+        prompt = (
+            f"Shorten the following `domain` to at most {DOMAIN_MAX_CHARS} characters and `summary` to at most "
+            f"{SUMMARY_MAX_CHARS} characters, in {lang}. Keep the meaning and the degree of certainty. Do not add any "
+            "fact, number or name that is not in the original. Drop details rather than compressing them into lists. "
+            "Use plain sentences without parentheses-heavy phrasing.\n\n"
+            + json.dumps({"domain": onto.domain, "summary": onto.summary}, ensure_ascii=False)
+        )
+        short = call_structured(prompt, _Headline, cache_dir, model)
+        onto = onto.model_copy(update={"domain": short.domain, "summary": short.summary})
+    if len(onto.summary) > SUMMARY_MAX_CHARS:
+        print(f"  warning: summary が {len(onto.summary)} 字のまま（上限 {SUMMARY_MAX_CHARS} 字）")
+    return onto
 
 
 def _norm(s: str) -> str:

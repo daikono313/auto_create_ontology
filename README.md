@@ -1,0 +1,42 @@
+# ontogen
+
+Webサイトを解析して、ディスカバリー（初回ヒアリング前）用のオントロジー叩き台を自動生成するプロトタイプ。
+Palantir Foundry の Object Type / Property / Link Type / Action Type に沿って出力する。
+
+## 仕組み
+
+```
+クロール（同一ホスト・URLパターンごとに代表ページだけ取得、robots.txt 準拠）
+  → ページ要約（見出し・表・フォーム・パンくず・JSON-LD・class 属性・画像の alt 属性）
+  → [LLM] ページパターンごとに概念候補を抽出
+  → [LLM] 候補を統合・名寄せ
+  → 根拠引用の照合（ハルシネーション検知）
+  → YAML / Mermaid ER図 / Markdownレポート
+```
+
+LLM は Claude Code のヘッドレスモード（`claude -p --json-schema`）で呼ぶため、APIキーは不要（Claude Code のログインを使う）。
+環境変数 `ANTHROPIC_API_KEY` があると、そちらがログインより優先されてしまうので、子プロセスに渡す前に取り除いている。
+
+## 使い方
+
+```bash
+uv sync
+uv run ontogen run https://books.toscrape.com/index.html --out out/books --gold gold/books_toscrape.yaml
+uv run ontogen eval out/books/ontology.yaml gold/books_toscrape.yaml
+```
+
+出力（`--out` 配下）:
+
+| ファイル | 内容 |
+|---|---|
+| `report.md` | 顧客説明用レポート（ER図、各定義、ヒアリング事項、根拠の検証結果） |
+| `ontology.yaml` | オントロジー本体（根拠URL・引用付き） |
+| `ontology.mmd` | Mermaid ER図 |
+| `fragments/` | ページパターンごとの抽出候補（統合前） |
+| `pages.json` | クロール結果のキャッシュ（`--recrawl` で取り直す） |
+| `llm_cache/` | LLM 応答のキャッシュ（プロンプトが同じなら再利用） |
+
+## 評価
+
+`gold/*.yaml` に人手で作った正解を置き、Object / Property / Link / Action ごとに適合率と再現率を出す。
+書式は `gold/books_toscrape.yaml` の冒頭コメントを参照。

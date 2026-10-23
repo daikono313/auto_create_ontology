@@ -1,0 +1,59 @@
+# books.toscrape.com の正解オントロジー（人手作成）
+# - 名前は `|` 区切りで別名を列挙
+# - optional: true（プロパティは先頭に `?`）はサイトから読み取れるか微妙なもの
+#   （あっても加点しない・なくても減点しない）
+# - properties を書いていない Object はプロパティを採点しない
+
+object_types:
+  - id: Book|Product
+    properties:
+      - title|name
+      - upc
+      - product_type
+      - price_excl_tax|price_excluding_tax|price
+      - price_incl_tax|price_including_tax
+      - tax|tax_amount
+      - availability|availability_status|in_stock|stock_status
+      - stock_quantity|available_quantity|quantity_available|stock_count|quantity_in_stock
+      - star_rating|rating
+      - number_of_reviews|review_count|num_reviews
+      - description|product_description
+      - image_url|image|cover_image|cover_image_url
+      - ?book_id|id|product_id
+      - ?product_url|url|detail_url|slug
+      - ?currency
+  - id: Category|Genre
+    properties:
+      - name|category_name
+      - ?category_id|id|slug
+      - ?book_count|product_count|result_count
+      - ?category_url|url
+  - id: Basket|Cart|ShoppingCart|ShoppingBasket
+  - id: BasketLine|BasketItem|CartItem|LineItem
+    optional: true
+  - id: Review|CustomerReview
+    optional: true
+  - id: Customer|User
+    optional: true
+
+link_types:
+  - between: [Book|Product, Category|Genre]
+  - between: [Basket|Cart|ShoppingCart|ShoppingBasket, Book|Product]
+    optional: true
+  - between: [Basket|Cart|ShoppingCart|ShoppingBasket, BasketLine|BasketItem|CartItem|LineItem]
+    optional: true
+  - between: [BasketLine|BasketItem|CartItem|LineItem, Book|Product]
+    optional: true
+  - between: [Review|CustomerReview, Book|Product]
+    optional: true
+  - between: [Category|Genre, Category|Genre]
+    optional: true
+  - between: [Customer|User, Basket|Cart|ShoppingCart|ShoppingBasket]
+    optional: true
+  - between: [Customer|User, Review|CustomerReview]
+    optional: true
+
+action_types:
+  - id: AddToBasket|AddToCart|AddBookToBasket
+  - id: WriteReview|SubmitReview|PostReview
+    optional: true
